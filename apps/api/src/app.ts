@@ -1,7 +1,7 @@
 import cors from 'cors';
 import express, { type NextFunction, type Request, type Response } from 'express';
 import { fileURLToPath } from 'node:url';
-import { getConfig, logger } from '@front-office/core';
+import { ConfigurationError, assertProductionSafety, getConfig, logger } from '@front-office/core';
 import { bootstrap } from './context.js';
 import { requireAdmin, requireCronSecret } from './middleware/auth.js';
 import { adminRouter } from './routes/admin.js';
@@ -20,6 +20,13 @@ import { webhookRouter } from './routes/webhooks.js';
  */
 export function createApp(): express.Express {
   const config = getConfig();
+
+  // Asserted here rather than in each entry point, so no future entry can be
+  // added that skips it. Both current entries call createApp() at module load,
+  // which makes a misconfigured deployment fail at cold start — loudly and
+  // before it can touch patient data — instead of on some later request.
+  assertProductionSafety(config);
+
   const app = express();
 
   app.set('trust proxy', 1);
@@ -85,12 +92,21 @@ function widgetDir(): string {
  * but re-syncing clinics on every request is not.
  */
 let bootstrapPromise: Promise<void> | undefined;
+let fatalError: Error | undefined;
 
 export function ensureBootstrapped(): Promise<void> {
+  // A misconfiguration is never fixed by trying again. Latching it stops a
+  // broken deployment from looking like a transient outage in the logs.
+  if (fatalError) return Promise.reject(fatalError);
+
   if (!bootstrapPromise) {
-    bootstrapPromise = bootstrap().catch((error) => {
-      // Let the next request retry rather than wedging the instance forever.
-      bootstrapPromise = undefined;
+    bootstrapPromise = bootstrap().catch((error: unknown) => {
+      if (error instanceof ConfigurationError) {
+        fatalError = error;
+      } else {
+        // Transient (a database blip, say) — let the next request retry.
+        bootstrapPromise = undefined;
+      }
       throw error;
     });
   }

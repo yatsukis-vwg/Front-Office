@@ -150,9 +150,16 @@ matter in a real deployment:
    rotate on a schedule.
 3. **Rate limiting is in-process.** Fine on one instance; move it to Redis or
    the platform edge before scaling out.
-4. **`STORE_DRIVER=file` is development only.** Production start-up rejects it,
-   but it is worth saying: that store has no access control of its own beyond
-   file permissions.
+4. **`STORE_DRIVER=file` is development only.** That store has no access control
+   of its own beyond file permissions, and on a serverless host its directory is
+   read-only and ephemeral. Every entry point rejects it in production —
+   `assertProductionSafety()` runs inside `createApp()`, so both the
+   long-running server and the serverless function refuse to start rather than
+   fail later, and the same check catches development defaults left in
+   `DATA_ENCRYPTION_KEY`, `PHONE_HASH_SALT`, `ADMIN_API_KEY` and `CRON_SECRET`.
+   It is covered by tests in `packages/core/src/config.test.ts`, because it is
+   the last thing standing between a careless deploy and patient records
+   encrypted with a key published in `.env.example`.
 5. **No data residency guarantee.** PDPL has requirements around cross-border
    transfer of personal data. Both the database region and the LLM inference
    region are deployment decisions this codebase does not make for you — pick

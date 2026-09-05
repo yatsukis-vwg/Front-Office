@@ -233,6 +233,18 @@ This is a monorepo with two deployables, so **Vercel needs to be told which one
 it is building** — pointing a project at the repository root will build the
 wrong thing.
 
+**Two things bite before the code ever runs:**
+
+- **The production URL only ever serves your Production Branch.** Deploying a
+  `claude/*` or feature branch produces a preview URL; the production alias
+  keeps serving the last build promoted to it. If the alias is showing old
+  behaviour, check what is actually deployed there before debugging the code.
+- **Root Directory must be `apps/api`.** If the project points at the repository
+  root, `apps/api/vercel.json` is ignored entirely, Vercel globs `src/` for a
+  handler, finds `app.ts` — which exports `createApp` by name and has no default
+  export — and fails with *"Invalid export found in module... The default export
+  must be a function or server."*
+
 Create the project with **Root Directory = `apps/api`**. It picks up
 [`apps/api/vercel.json`](apps/api/vercel.json), which installs the whole
 workspace, runs `tsc -b` (building `@front-office/core` through the project
@@ -245,7 +257,21 @@ Two settings matter on serverless:
 - `ENABLE_INPROCESS_JOBS=false` — instances do not stay alive to run timers.
   Add Vercel Cron entries for `POST /jobs/tick` and `POST /jobs/nightly` instead
   (both take the `x-cron-secret` header).
-- `STORE_DRIVER=supabase` — the file store is per-instance and will not survive.
+- `STORE_DRIVER=supabase` — `/var/task` is read-only and ephemeral, so the file
+  store cannot work there. This makes `SUPABASE_URL` and
+  `SUPABASE_SERVICE_ROLE_KEY` required. (Both are the project's REST endpoint
+  and key from Supabase → Settings → API. There is no Postgres connection string
+  to configure — the API talks to Supabase over HTTP, so connection pooling does
+  not apply.)
+
+**A misconfigured deployment refuses to start.** `assertProductionSafety()` runs
+inside `createApp()`, which both entry points call at module load, so on Vercel
+it fires at cold start rather than on some later request. Leaving any of
+`DATA_ENCRYPTION_KEY`, `PHONE_HASH_SALT`, `ADMIN_API_KEY` or `CRON_SECRET` on
+their development defaults — or leaving `STORE_DRIVER=file` — throws a
+`ConfigurationError` listing every problem, and the function never serves
+traffic. That failure is latched, not retried, so a broken deploy shows up as a
+configuration error in the logs instead of an intermittent outage.
 
 The clinic YAML files are bundled into the function via `includeFiles`, and the
 knowledge base loader resolves `clinics/` relative to its own module when the

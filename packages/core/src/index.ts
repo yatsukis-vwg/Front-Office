@@ -3,7 +3,14 @@
  */
 
 export * from './types.js';
-export { getConfig, assertProductionSafety, resetConfigCache, type AppConfig, type StoreDriver } from './config.js';
+export {
+  getConfig,
+  assertProductionSafety,
+  ConfigurationError,
+  resetConfigCache,
+  type AppConfig,
+  type StoreDriver,
+} from './config.js';
 export { logger } from './logger.js';
 
 export * from './crypto/encryption.js';

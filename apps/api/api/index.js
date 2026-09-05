@@ -9,13 +9,21 @@
  * Everything routes here (see the rewrite in vercel.json); Express does the
  * actual routing, exactly as it does on a long-running host.
  */
+import { assertProductionSafety } from '@front-office/core';
 import { createApp, ensureBootstrapped } from '../dist/app.js';
+
+// Fail fast at cold start, not on request 10,000. Serverless has no start-up
+// hook of its own, so module load is the only place a misconfigured deployment
+// can be stopped before it encrypts patient data with a key published in
+// .env.example. createApp() asserts too; this states the contract at the door.
+assertProductionSafety();
 
 const app = createApp();
 
 export default async function handler(request, response) {
   try {
-    // Idempotent and memoised — a warm instance pays for this once.
+    // Idempotent and memoised — a warm instance pays for this once. A
+    // configuration failure is latched and never retried.
     await ensureBootstrapped();
   } catch (error) {
     response.statusCode = 503;

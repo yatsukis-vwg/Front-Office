@@ -118,8 +118,24 @@ export function getConfig(): AppConfig {
 }
 
 /**
- * Called at API start-up. Development defaults are convenient but must never
- * reach a deployment that holds real patient data.
+ * Thrown when the process is configured in a way that must never serve real
+ * patient data. Distinct from a transient start-up failure: retrying cannot
+ * fix it, so callers treat it as terminal rather than as a blip.
+ */
+export class ConfigurationError extends Error {
+  readonly problems: string[];
+
+  constructor(problems: string[]) {
+    super(`Refusing to start in production:\n  - ${problems.join('\n  - ')}`);
+    this.name = 'ConfigurationError';
+    this.problems = problems;
+  }
+}
+
+/**
+ * Called at start-up on every entry point — the long-running server, the
+ * serverless function, and `createApp()` itself. Development defaults are
+ * convenient but must never reach a deployment holding real patient data.
  */
 export function assertProductionSafety(config: AppConfig = getConfig()): void {
   if (config.nodeEnv !== 'production') return;
@@ -129,9 +145,7 @@ export function assertProductionSafety(config: AppConfig = getConfig()): void {
   if (config.adminApiKey === 'dev-admin-key') problems.push('ADMIN_API_KEY is still the development default');
   if (config.cronSecret === 'dev-cron-secret') problems.push('CRON_SECRET is still the development default');
   if (config.storeDriver === 'file') problems.push('STORE_DRIVER=file is not supported in production; use supabase');
-  if (problems.length > 0) {
-    throw new Error(`Refusing to start in production:\n  - ${problems.join('\n  - ')}`);
-  }
+  if (problems.length > 0) throw new ConfigurationError(problems);
 }
 
 /** Test helper — forces the next getConfig() call to re-read the environment. */

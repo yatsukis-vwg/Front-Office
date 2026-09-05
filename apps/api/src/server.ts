@@ -1,4 +1,4 @@
-import { assertProductionSafety, getConfig, logger } from '@front-office/core';
+import { getConfig, logger } from '@front-office/core';
 import { createApp, ensureBootstrapped } from './app.js';
 import { startInProcessJobs } from './routes/jobs.js';
 
@@ -9,10 +9,11 @@ import { startInProcessJobs } from './routes/jobs.js';
  * reaches this file.
  */
 const config = getConfig();
+// createApp() runs assertProductionSafety(), so a misconfigured process dies
+// here at module load rather than after opening a port.
 const app = createApp();
 
 async function main(): Promise<void> {
-  assertProductionSafety(config);
   await ensureBootstrapped();
 
   // Timers only make sense in a process that stays alive. On serverless the
