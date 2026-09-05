@@ -1,0 +1,631 @@
+# =============================================================================
+# Clinic knowledge base — عيادات نور الرياض (fictional demo clinic)
+#
+# THIS FILE IS THE ENTIRE ONBOARDING SURFACE FOR A NEW CLINIC.
+# Copy it to clinics/<new-slug>.yaml, change the contents, run
+# `npm run kb:validate` and the receptionist is live for that clinic.
+# Nothing else needs to change — no code, no migration, no redeploy.
+#
+# Validate after every edit:  npm run kb:validate
+# Schema:                     packages/core/src/kb/schema.ts
+# =============================================================================
+version: 1
+
+clinic:
+  slug: noor-riyadh
+  name_ar: "عيادات نور الرياض لطب الأسنان والتجميل"
+  name_en: "Noor Riyadh Dental & Aesthetic Clinics"
+  tagline_ar: "ابتسامتك وبشرتك بأيدٍ سعودية متخصصة"
+  timezone: "Asia/Riyadh"
+  # Used by the metrics page: bookings × avg ticket = estimated captured revenue.
+  avg_ticket_sar: 1150
+  # PDPL retention window (2 years). The purge job deletes patient data past this.
+  retention_days: 730
+
+  address:
+    ar: "طريق الأمير تركي بن عبدالعزيز الأول، حي الصحافة، الرياض 13315"
+    en: "Prince Turki bin Abdulaziz Al Awwal Rd, Al Sahafah District, Riyadh 13315"
+    district_ar: "حي الصحافة"
+    city_ar: "الرياض"
+    map_url: "https://maps.google.com/?q=24.8075,46.6390"
+    landmark_ar: "مقابل بوليفارد الصحافة، نفس مبنى صيدلية النهدي، الدور الثاني"
+    parking_ar: "مواقف مجانية للمراجعين في قبو المبنى (B1)، والدخول من البوابة الخلفية"
+
+  contact:
+    phone: "+966112345678"
+    whatsapp: "+966501234567"
+    email: "hello@noorriyadh-demo.sa"
+    instagram: "@noor.riyadh.clinics"
+    website: "https://noorriyadh-demo.sa"
+
+  # 0 = Sunday, 1 = Monday … 6 = Saturday.
+  hours:
+    - days: [0, 1, 2, 3, 4]      # الأحد – الخميس
+      open: "09:00"
+      close: "21:00"
+      breaks:
+        - start: "13:00"
+          end: "16:00"
+          label_ar: "استراحة الظهر"
+    - days: [6]                  # السبت
+      open: "12:00"
+      close: "21:00"
+      breaks: []
+    # الجمعة إجازة — no entry means closed.
+
+  holidays:
+    - "2026-09-23"   # اليوم الوطني
+    - "2027-03-20"   # إجازة عيد الفطر
+    - "2027-03-21"
+    - "2027-03-22"
+
+  emergency:
+    ambulance_number: "997"
+    urgent_line: "+966112345600"
+    nearest_er_ar: "أقرب طوارئ: مستشفى الملك فهد التخصصي - قسم الطوارئ، طريق الملك عبدالعزيز"
+
+scheduling:
+  slot_granularity_min: 15
+  min_notice_hours: 2
+  max_advance_days: 60
+  max_slots_offered: 6
+
+# -----------------------------------------------------------------------------
+# SERVICES — the published price list.
+# The safety layer will not let the agent quote ANY number that is not in here.
+# -----------------------------------------------------------------------------
+services:
+  - id: dental_consult
+    name_ar: "كشف واستشارة أسنان"
+    name_en: "Dental consultation"
+    category_ar: "أسنان"
+    description_ar: "فحص شامل مع أشعة بانورامية عند الحاجة، وخطة علاج مكتوبة"
+    duration_min: 30
+    buffer_min: 10
+    price: { type: fixed, amount: 150, currency: SAR }
+    doctor_ids: [dr_reem, dr_khalid]
+    aliases: ["كشف", "استشارة", "فحص أسنان", "consultation"]
+
+  - id: dental_cleaning
+    name_ar: "تنظيف وتلميع الأسنان"
+    name_en: "Scaling & polishing"
+    category_ar: "أسنان"
+    description_ar: "إزالة الجير والتصبغات السطحية مع تلميع، وجلسة فلورايد"
+    duration_min: 45
+    buffer_min: 10
+    price: { type: fixed, amount: 350, currency: SAR }
+    doctor_ids: [dr_reem, dr_khalid]
+    aliases: ["تنظيف", "جير", "سكيلنج", "cleaning"]
+
+  - id: composite_filling
+    name_ar: "حشوة تجميلية"
+    name_en: "Composite filling"
+    category_ar: "أسنان"
+    description_ar: "حشوة بلون السن للأسنان الأمامية والخلفية"
+    duration_min: 45
+    buffer_min: 10
+    price: { type: fixed, amount: 400, currency: SAR, unit_ar: "للسن الواحد", unit_en: "per tooth" }
+    doctor_ids: [dr_reem, dr_khalid]
+    aliases: ["حشوة", "حشو", "filling"]
+
+  - id: root_canal
+    name_ar: "علاج عصب"
+    name_en: "Root canal treatment"
+    category_ar: "أسنان"
+    description_ar: "علاج قناة الجذر بجلسة أو جلستين حسب السن"
+    duration_min: 90
+    buffer_min: 15
+    price: { type: from, amount: 1200, currency: SAR, unit_ar: "حسب السن وعدد القنوات", unit_en: "depending on the tooth" }
+    doctor_ids: [dr_khalid]
+    aliases: ["عصب", "سحب عصب", "root canal"]
+
+  - id: extraction
+    name_ar: "خلع سن"
+    name_en: "Tooth extraction"
+    category_ar: "أسنان"
+    description_ar: "خلع بسيط تحت تخدير موضعي"
+    duration_min: 40
+    buffer_min: 15
+    price: { type: from, amount: 300, currency: SAR }
+    doctor_ids: [dr_khalid]
+    aliases: ["خلع", "قلع", "extraction"]
+
+  - id: zoom_whitening
+    name_ar: "تبييض الأسنان بالليزر (زوم)"
+    name_en: "Zoom laser whitening"
+    category_ar: "أسنان"
+    description_ar: "جلسة تبييض واحدة داخل العيادة مع قوالب متابعة منزلية"
+    duration_min: 75
+    buffer_min: 15
+    price: { type: fixed, amount: 1800, currency: SAR }
+    doctor_ids: [dr_reem]
+    aliases: ["تبييض", "زوم", "whitening", "bleaching"]
+
+  - id: veneers
+    name_ar: "فينير (ابتسامة هوليوود)"
+    name_en: "Porcelain veneers"
+    category_ar: "أسنان"
+    description_ar: "عدسات إيماكس بمقاس رقمي، تبدأ بجلسة تصميم ابتسامة"
+    duration_min: 120
+    buffer_min: 20
+    price: { type: from, amount: 2200, currency: SAR, unit_ar: "للسن الواحد", unit_en: "per tooth" }
+    doctor_ids: [dr_reem]
+    requires_consultation: true
+    aliases: ["فينير", "عدسات", "ابتسامة هوليوود", "veneers", "hollywood smile"]
+
+  - id: implant
+    name_ar: "زراعة أسنان"
+    name_en: "Dental implant"
+    category_ar: "أسنان"
+    description_ar: "زرعة سويسرية مع أشعة مقطعية وخطة رقمية"
+    duration_min: 120
+    buffer_min: 30
+    price: { type: from, amount: 4500, currency: SAR, unit_ar: "للزرعة الواحدة شامل التاج", unit_en: "per implant incl. crown" }
+    doctor_ids: [dr_khalid]
+    requires_consultation: true
+    aliases: ["زراعة", "زرعة", "implant"]
+
+  - id: clear_aligners
+    name_ar: "تقويم شفاف"
+    name_en: "Clear aligners"
+    category_ar: "أسنان"
+    description_ar: "تقويم شفاف بمسح رقمي ثلاثي الأبعاد ومتابعة كل 6 أسابيع"
+    duration_min: 60
+    buffer_min: 15
+    price: { type: range, amount: 12000, max_amount: 18000, currency: SAR, unit_ar: "للحالة كاملة حسب عدد القوالب", unit_en: "full case" }
+    doctor_ids: [dr_reem]
+    requires_consultation: true
+    aliases: ["تقويم", "تقويم شفاف", "aligners", "invisalign"]
+
+  - id: botox_area
+    name_ar: "بوتوكس منطقة واحدة"
+    name_en: "Botox, single area"
+    category_ar: "تجميل"
+    description_ar: "منطقة واحدة (الجبهة أو ما بين الحاجبين أو حول العين)"
+    duration_min: 30
+    buffer_min: 10
+    price: { type: fixed, amount: 900, currency: SAR, unit_ar: "للمنطقة الواحدة", unit_en: "per area" }
+    doctor_ids: [dr_noura]
+    aliases: ["بوتوكس", "botox"]
+
+  - id: lip_filler
+    name_ar: "فيلر شفايف"
+    name_en: "Lip filler"
+    category_ar: "تجميل"
+    description_ar: "فيلر هيالورونيك أسيد بعبوة واحدة مع مخدر موضعي"
+    duration_min: 45
+    buffer_min: 15
+    price: { type: fixed, amount: 1600, currency: SAR, unit_ar: "للعبوة الواحدة", unit_en: "per syringe" }
+    doctor_ids: [dr_noura]
+    aliases: ["فيلر", "فلر شفايف", "filler"]
+
+  - id: hydrafacial
+    name_ar: "هيدرافيشل"
+    name_en: "HydraFacial"
+    category_ar: "تجميل"
+    description_ar: "تنظيف وترطيب عميق بجهاز الهيدرافيشل مع سيروم مخصص"
+    duration_min: 60
+    buffer_min: 10
+    price: { type: fixed, amount: 650, currency: SAR }
+    doctor_ids: [dr_noura, dr_sara]
+    aliases: ["هيدرافيشل", "hydrafacial"]
+
+  - id: deep_cleanse
+    name_ar: "تنظيف بشرة عميق"
+    name_en: "Deep facial cleanse"
+    category_ar: "تجميل"
+    description_ar: "تنظيف يدوي مع بخار وماسك مهدئ"
+    duration_min: 60
+    buffer_min: 10
+    price: { type: fixed, amount: 500, currency: SAR }
+    doctor_ids: [dr_sara]
+    aliases: ["تنظيف بشرة", "فيشل", "facial"]
+
+  - id: laser_full_body
+    name_ar: "ليزر إزالة الشعر - كامل الجسم"
+    name_en: "Laser hair removal, full body"
+    category_ar: "تجميل"
+    description_ar: "جلسة ليزر ديود بارد لكامل الجسم"
+    duration_min: 90
+    buffer_min: 15
+    price: { type: fixed, amount: 1200, currency: SAR, unit_ar: "للجلسة الواحدة", unit_en: "per session" }
+    doctor_ids: [dr_sara]
+    aliases: ["ليزر كامل", "ليزر الجسم", "full body laser"]
+
+  - id: laser_small_area
+    name_ar: "ليزر إزالة الشعر - منطقة صغيرة"
+    name_en: "Laser hair removal, small area"
+    category_ar: "تجميل"
+    description_ar: "منطقة صغيرة مثل الوجه أو الإبط أو اليدين"
+    duration_min: 30
+    buffer_min: 10
+    price: { type: fixed, amount: 300, currency: SAR, unit_ar: "للجلسة الواحدة", unit_en: "per session" }
+    doctor_ids: [dr_sara]
+    aliases: ["ليزر", "ليزر منطقة", "laser"]
+
+  - id: prp_hair
+    name_ar: "بلازما للشعر (PRP)"
+    name_en: "PRP hair treatment"
+    category_ar: "تجميل"
+    description_ar: "حقن بلازما غنية بالصفائح لفروة الرأس"
+    duration_min: 60
+    buffer_min: 15
+    price: { type: fixed, amount: 1100, currency: SAR, unit_ar: "للجلسة الواحدة", unit_en: "per session" }
+    doctor_ids: [dr_noura]
+    aliases: ["بلازما", "prp", "بي ار بي"]
+
+  - id: meso_skin
+    name_ar: "ميزوثيرابي للبشرة"
+    name_en: "Skin mesotherapy"
+    category_ar: "تجميل"
+    description_ar: "حقن مغذيات دقيقة لنضارة البشرة"
+    duration_min: 45
+    buffer_min: 10
+    price: { type: fixed, amount: 800, currency: SAR, unit_ar: "للجلسة الواحدة", unit_en: "per session" }
+    doctor_ids: [dr_noura]
+    aliases: ["ميزو", "ميزوثيرابي", "mesotherapy"]
+
+# -----------------------------------------------------------------------------
+# DOCTORS
+# -----------------------------------------------------------------------------
+doctors:
+  - id: dr_reem
+    name_ar: "د. ريم العتيبي"
+    name_en: "Dr. Reem Al-Otaibi"
+    title_ar: "استشارية"
+    speciality_ar: "طب أسنان تجميلي وتصميم ابتسامة"
+    speciality_en: "Cosmetic dentistry & smile design"
+    gender: female
+    languages: ["ar", "en"]
+    bio_ar: "خريجة جامعة الملك سعود، زمالة في طب الأسنان التجميلي من جامعة نيويورك، خبرة 12 سنة"
+    working_hours:
+      - days: [0, 1, 2, 3]
+        open: "09:00"
+        close: "17:00"
+        breaks:
+          - start: "13:00"
+            end: "16:00"
+      - days: [6]
+        open: "12:00"
+        close: "19:00"
+        breaks: []
+    days_off: ["2026-09-28"]
+
+  - id: dr_khalid
+    name_ar: "د. خالد الدوسري"
+    name_en: "Dr. Khalid Al-Dosari"
+    title_ar: "استشاري"
+    speciality_ar: "جراحة فم وزراعة أسنان"
+    speciality_en: "Oral surgery & implantology"
+    gender: male
+    languages: ["ar", "en"]
+    bio_ar: "بورد سعودي في جراحة الفم والوجه والفكين، خبرة 15 سنة في الزراعة الفورية"
+    working_hours:
+      - days: [0, 1, 2, 3, 4]
+        open: "16:00"
+        close: "21:00"
+        breaks: []
+    days_off: []
+
+  - id: dr_noura
+    name_ar: "د. نورة القحطاني"
+    name_en: "Dr. Noura Al-Qahtani"
+    title_ar: "أخصائية"
+    speciality_ar: "جلدية وتجميل غير جراحي"
+    speciality_en: "Dermatology & non-surgical aesthetics"
+    gender: female
+    languages: ["ar", "en", "fr"]
+    bio_ar: "أخصائية جلدية، دبلوم في التجميل الحقني من باريس، خبرة 9 سنوات"
+    working_hours:
+      - days: [0, 1, 2, 3, 4]
+        open: "10:00"
+        close: "20:00"
+        breaks:
+          - start: "13:00"
+            end: "16:00"
+    days_off: []
+
+  - id: dr_sara
+    name_ar: "سارة الحربي"
+    name_en: "Sara Al-Harbi"
+    title_ar: "أخصائية عناية بالبشرة"
+    speciality_ar: "ليزر وعناية بالبشرة"
+    speciality_en: "Laser & skincare"
+    gender: female
+    languages: ["ar"]
+    bio_ar: "أخصائية ليزر معتمدة، خبرة 7 سنوات في أجهزة الديود والهيدرافيشل"
+    working_hours:
+      - days: [0, 1, 2, 3, 4, 6]
+        open: "12:00"
+        close: "21:00"
+        breaks: []
+    days_off: []
+
+# -----------------------------------------------------------------------------
+# INSURANCE
+# -----------------------------------------------------------------------------
+insurance:
+  accepted:
+    - name_ar: "بوبا العربية"
+      name_en: "Bupa Arabia"
+      direct_billing: true
+      notes_ar: "الفئات A و B، والعلاجات التجميلية غير مغطاة"
+    - name_ar: "التعاونية للتأمين"
+      name_en: "Tawuniya"
+      direct_billing: true
+      notes_ar: "يلزم موافقة مسبقة لعلاج العصب والزراعة"
+    - name_ar: "ميدغلف"
+      name_en: "MedGulf"
+      direct_billing: true
+      notes_ar: "الأسنان فقط، بدون تغطية للتجميل"
+    - name_ar: "الراجحي تكافل"
+      name_en: "Al Rajhi Takaful"
+      direct_billing: true
+    - name_ar: "ملاذ للتأمين"
+      name_en: "Malath"
+      direct_billing: false
+      notes_ar: "الدفع في العيادة والمريض يقدم المطالبة لشركته"
+  not_accepted_ar:
+    - "التأمين السياحي وتأمين الزيارة"
+    - "شركات التأمين خارج السعودية"
+  notes_ar: "الخدمات التجميلية (بوتوكس، فيلر، ليزر، تبييض، فينير) غير مشمولة بأي بوليصة تأمين لدينا وتُدفع نقدًا أو بالشبكة"
+
+# -----------------------------------------------------------------------------
+# PRE / POST APPOINTMENT INSTRUCTIONS
+# -----------------------------------------------------------------------------
+instructions:
+  pre:
+    - id: pre_general
+      service_ids: ["*"]
+      title_ar: "قبل الموعد"
+      text_ar: "ياليت توصل قبل الموعد بـ 10 دقائق، ومعك الهوية وبطاقة التأمين إذا عندك. لو بتلغي أو تأجل خبرنا قبل 4 ساعات على الأقل."
+      text_en: "Please arrive 10 minutes early with your ID and insurance card. Let us know at least 4 hours ahead if you need to cancel or reschedule."
+    - id: pre_whitening
+      service_ids: [zoom_whitening]
+      title_ar: "قبل جلسة التبييض"
+      text_ar: "يفضّل تسوي تنظيف أسنان قبل التبييض بأسبوع، وتتجنب القهوة والشاي والتدخين يوم الجلسة."
+    - id: pre_botox_filler
+      service_ids: [botox_area, lip_filler, meso_skin, prp_hair]
+      title_ar: "قبل جلسات الحقن"
+      text_ar: "تجنب الأسبرين والمسكنات المميعة وفيتامين E قبل الجلسة بـ 3 أيام، ولا تشرب أي شيء يحتوي كحول قبلها بـ 24 ساعة. تعال بوجه نظيف بدون مكياج."
+    - id: pre_laser
+      service_ids: [laser_full_body, laser_small_area]
+      title_ar: "قبل جلسة الليزر"
+      text_ar: "احلق المنطقة بالشفرة قبل الجلسة بـ 12 ساعة، ولا تستخدم الشمع أو الملقاط قبلها بأسبوعين، وتجنّب التعرض للشمس والتان قبلها بأسبوع."
+    - id: pre_implant
+      service_ids: [implant, root_canal, extraction]
+      title_ar: "قبل الجراحة"
+      text_ar: "تعال وأنت فاطر ولا تجي على معدة فاضية، ولو تستخدم أي دواء مسيّل للدم أو عندك حالة صحية خبّر الدكتور قبل الموعد."
+  post:
+    - id: post_whitening
+      service_ids: [zoom_whitening]
+      title_ar: "بعد التبييض"
+      text_ar: "أول 48 ساعة ابتعد عن القهوة والشاي والكولا والصلصات الملونة والتدخين. الحساسية الخفيفة طبيعية وتروح خلال يومين."
+    - id: post_injections
+      service_ids: [botox_area, lip_filler]
+      title_ar: "بعد الحقن"
+      text_ar: "لا تنام على وجهك ولا تدلك المنطقة لمدة 6 ساعات، وتجنّب الرياضة والساونا والبخار 24 ساعة. الانتفاخ البسيط طبيعي في أول يومين."
+    - id: post_laser
+      service_ids: [laser_full_body, laser_small_area]
+      title_ar: "بعد الليزر"
+      text_ar: "استخدم مرطب وواقي شمس، وتجنّب الحمام الساخن والبحر والمسبح 48 ساعة، ولا تحك المنطقة."
+    - id: post_surgery
+      service_ids: [implant, extraction, root_canal]
+      title_ar: "بعد الجراحة"
+      text_ar: "عض على الشاش نص ساعة، وكمادات باردة أول يوم، وأكل بارد ولين. لا تمضمض بقوة ولا تدخّن أول 48 ساعة، والتزم بالدواء اللي كتبه لك الدكتور."
+    - id: post_general
+      service_ids: ["*"]
+      title_ar: "بعد أي موعد"
+      text_ar: "لو صار عندك أي انزعاج بعد الموعد كلّمنا على رقم العيادة وبنرتب لك متابعة."
+
+# -----------------------------------------------------------------------------
+# POLICIES
+# -----------------------------------------------------------------------------
+policies:
+  cancellation_ar: "الإلغاء أو التأجيل مجاني إذا كان قبل الموعد بـ 4 ساعات على الأقل، وبعدها يُحتسب رسم 100 ريال على الموعد القادم."
+  late_ar: "لو تأخرت أكثر من 15 دقيقة قد نحتاج نأجل موعدك حسب جدول الدكتور."
+  deposit_ar: "المواعيد الجراحية والتجميلية تحتاج عربون 500 ريال يُخصم من قيمة العلاج."
+  no_show_ar: "عدم الحضور بدون إشعار يُحتسب رسم 150 ريال يُضاف على الموعد الجاي."
+  minors_ar: "المرضى تحت 18 سنة لازم يكونون مع ولي أمر، والخدمات التجميلية الحقنية لا تُقدّم لأقل من 18 سنة إطلاقًا."
+
+# -----------------------------------------------------------------------------
+# FAQ — answered verbatim by the agent. Edit these in the dashboard KB editor.
+# -----------------------------------------------------------------------------
+faqs:
+  - id: faq_hours
+    q_ar: "وش دوامكم؟"
+    a_ar: "دوامنا من الأحد إلى الخميس من ٩ الصباح إلى ٩ بالليل مع استراحة من ١ إلى ٤ العصر، والسبت من ١٢ الظهر إلى ٩ بالليل. الجمعة إجازة."
+    q_en: "What are your working hours?"
+    a_en: "Sunday to Thursday 9 AM–9 PM with a break from 1–4 PM, Saturday 12 PM–9 PM. Closed Friday."
+    tags: ["hours", "دوام"]
+
+  - id: faq_location
+    q_ar: "وين موقعكم بالضبط؟"
+    a_ar: "إحنا في حي الصحافة على طريق الأمير تركي بن عبدالعزيز الأول، مقابل بوليفارد الصحافة، نفس مبنى صيدلية النهدي الدور الثاني. أرسل لك اللوكيشن؟"
+    q_en: "Where exactly are you located?"
+    a_en: "Al Sahafah district on Prince Turki bin Abdulaziz Al Awwal Road, opposite Sahafah Boulevard, second floor of the Nahdi pharmacy building. Want the map link?"
+    tags: ["location", "موقع"]
+
+  - id: faq_parking
+    q_ar: "فيه مواقف؟"
+    a_ar: "إيه فيه مواقف مجانية للمراجعين في قبو المبنى B1، والدخول من البوابة الخلفية."
+    tags: ["parking", "مواقف"]
+
+  - id: faq_walkin
+    q_ar: "أقدر أجي بدون موعد؟"
+    a_ar: "نستقبل بدون موعد لكن حسب توفر الدكتور وقد تنتظر شوي. الأفضل أحجز لك موعد وتجي على راحتك."
+    tags: ["walkin", "بدون موعد"]
+
+  - id: faq_consult_price
+    q_ar: "كم سعر الكشف؟"
+    a_ar: "الكشف والاستشارة ١٥٠ ريال، وتشمل الفحص والأشعة إذا احتجناها وخطة علاج مكتوبة."
+    tags: ["price", "كشف"]
+
+  - id: faq_cleaning_price
+    q_ar: "كم تنظيف الأسنان؟"
+    a_ar: "تنظيف وتلميع الأسنان ٣٥٠ ريال، والجلسة تاخذ حوالي ٤٥ دقيقة."
+    tags: ["price", "تنظيف"]
+
+  - id: faq_whitening_price
+    q_ar: "كم سعر التبييض؟"
+    a_ar: "تبييض الأسنان بالليزر (زوم) ١٨٠٠ ريال، جلسة وحدة بالعيادة وتشمل قوالب متابعة للبيت."
+    tags: ["price", "تبييض"]
+
+  - id: faq_veneer_price
+    q_ar: "كم سعر الفينير أو ابتسامة هوليوود؟"
+    a_ar: "الفينير يبدأ من ٢٢٠٠ ريال للسن الواحد، والعدد يتحدد بعد جلسة تصميم الابتسامة مع د. ريم. أحجز لك استشارة؟"
+    tags: ["price", "فينير"]
+
+  - id: faq_implant_price
+    q_ar: "كم تكلفة زراعة السن؟"
+    a_ar: "الزراعة تبدأ من ٤٥٠٠ ريال للزرعة الواحدة شاملة التاج، والسعر النهائي يتحدد بعد الأشعة المقطعية مع د. خالد."
+    tags: ["price", "زراعة"]
+
+  - id: faq_aligners_price
+    q_ar: "كم سعر التقويم الشفاف؟"
+    a_ar: "التقويم الشفاف من ١٢٠٠٠ إلى ١٨٠٠٠ ريال للحالة كاملة حسب عدد القوالب، ويشمل المسح الرقمي والمتابعة."
+    tags: ["price", "تقويم"]
+
+  - id: faq_botox_price
+    q_ar: "كم سعر البوتوكس؟"
+    a_ar: "البوتوكس ٩٠٠ ريال للمنطقة الوحدة (الجبهة أو بين الحواجب أو حول العين) مع د. نورة."
+    tags: ["price", "بوتوكس"]
+
+  - id: faq_filler_price
+    q_ar: "كم فيلر الشفايف؟"
+    a_ar: "فيلر الشفايف ١٦٠٠ ريال للعبوة الوحدة، ويشمل المخدر الموضعي."
+    tags: ["price", "فيلر"]
+
+  - id: faq_laser_price
+    q_ar: "كم سعر جلسة الليزر؟"
+    a_ar: "ليزر كامل الجسم ١٢٠٠ ريال للجلسة، والمنطقة الصغيرة زي الوجه أو الإبط ٣٠٠ ريال للجلسة."
+    tags: ["price", "ليزر"]
+
+  - id: faq_hydrafacial_price
+    q_ar: "كم الهيدرافيشل؟"
+    a_ar: "الهيدرافيشل ٦٥٠ ريال للجلسة، وتنظيف البشرة العميق ٥٠٠ ريال."
+    tags: ["price", "بشرة"]
+
+  - id: faq_insurance_list
+    q_ar: "تقبلون تأمين؟ وش الشركات؟"
+    a_ar: "إيه نقبل تأمين: بوبا العربية، التعاونية، ميدغلف، والراجحي تكافل بالفوترة المباشرة، وملاذ بنظام التعويض. عندك أي وحدة منها؟"
+    tags: ["insurance", "تأمين"]
+
+  - id: faq_insurance_cosmetic
+    q_ar: "التأمين يغطي التجميل؟"
+    a_ar: "لا للأسف، الخدمات التجميلية زي البوتوكس والفيلر والليزر والتبييض والفينير ما تغطيها أي بوليصة تأمين عندنا، وتُدفع نقدًا أو بالشبكة."
+    tags: ["insurance", "تأمين"]
+
+  - id: faq_insurance_approval
+    q_ar: "أحتاج موافقة من التأمين؟"
+    a_ar: "علاج العصب والزراعة يحتاجون موافقة مسبقة مع التعاونية، وبقية العلاجات عادة تمشي مباشرة. لو ودك نتأكد نرسل الطلب ونرد عليك."
+    tags: ["insurance", "تأمين"]
+
+  - id: faq_payment
+    q_ar: "وش طرق الدفع؟"
+    a_ar: "نقبل مدى وفيزا وماستر وأبل باي والكاش، وفيه تقسيط عبر تابي وتمارا للعلاجات فوق ١٠٠٠ ريال."
+    tags: ["payment", "دفع"]
+
+  - id: faq_installments
+    q_ar: "فيه تقسيط؟"
+    a_ar: "إيه فيه تقسيط عبر تابي وتمارا على ٤ دفعات بدون فوائد للعلاجات فوق ١٠٠٠ ريال."
+    tags: ["payment", "تقسيط"]
+
+  - id: faq_cancellation
+    q_ar: "كيف ألغي موعدي؟"
+    a_ar: "عطني رقم الحجز وألغيه لك على طول. الإلغاء مجاني إذا كان قبل الموعد بـ ٤ ساعات، وبعدها يُحتسب ١٠٠ ريال على الموعد الجاي."
+    tags: ["policy", "إلغاء"]
+
+  - id: faq_reschedule
+    q_ar: "أقدر أأجل موعدي؟"
+    a_ar: "أكيد، أعطني رقم الحجز والوقت اللي يناسبك وأشوف المتاح وأأجله لك."
+    tags: ["policy", "تأجيل"]
+
+  - id: faq_late
+    q_ar: "إذا تأخرت عن الموعد؟"
+    a_ar: "لو تأخرت أكثر من ١٥ دقيقة قد نحتاج نأجل موعدك حسب جدول الدكتور، فياليت تخبرنا إذا كنت بتتأخر."
+    tags: ["policy", "تأخير"]
+
+  - id: faq_deposit
+    q_ar: "فيه عربون؟"
+    a_ar: "المواعيد الجراحية والتجميلية تحتاج عربون ٥٠٠ ريال، ويُخصم من قيمة العلاج."
+    tags: ["policy", "عربون"]
+
+  - id: faq_noshow
+    q_ar: "إذا ما حضرت الموعد؟"
+    a_ar: "عدم الحضور بدون إشعار يُحتسب عليه ١٥٠ ريال تُضاف على الموعد الجاي، فياليت تخبرنا لو ما بتقدر تجي."
+    tags: ["policy", "عدم حضور"]
+
+  - id: faq_female_doctor
+    q_ar: "فيه دكتورة بنت؟"
+    a_ar: "إيه، د. ريم العتيبي لطب الأسنان التجميلي، ود. نورة القحطاني للجلدية والتجميل، والأستاذة سارة الحربي لليزر والعناية بالبشرة."
+    tags: ["doctors", "دكتورة"]
+
+  - id: faq_english_doctor
+    q_ar: "فيه دكتور يتكلم إنجليزي؟"
+    a_ar: "إيه، د. ريم ود. خالد ود. نورة كلهم يتكلمون إنجليزي، ود. نورة تتكلم فرنسي كمان."
+    tags: ["doctors", "لغات"]
+
+  - id: faq_kids
+    q_ar: "تستقبلون أطفال؟"
+    a_ar: "نستقبل الأطفال لخدمات الأسنان مع ولي الأمر. الخدمات التجميلية الحقنية ما نقدمها لأقل من ١٨ سنة إطلاقًا."
+    tags: ["policy", "أطفال"]
+
+  - id: faq_appointment_length
+    q_ar: "كم تاخذ الجلسة وقت؟"
+    a_ar: "يعتمد على الخدمة: الكشف ٣٠ دقيقة، التنظيف ٤٥ دقيقة، التبييض ساعة وربع، والزراعة ساعتين. قول لي وش الخدمة وأقول لك بالضبط."
+    tags: ["appointments", "مدة"]
+
+  - id: faq_first_visit
+    q_ar: "وش أحتاج أجيب معي أول زيارة؟"
+    a_ar: "جيب الهوية أو الإقامة وبطاقة التأمين إذا عندك، وأي أشعة أو تقارير سابقة إذا متوفرة. وتعال قبل الموعد بـ ١٠ دقايق."
+    tags: ["appointments", "أول زيارة"]
+
+  - id: faq_emergency_dental
+    q_ar: "عندي حالة مستعجلة بأسناني، وش أسوي؟"
+    a_ar: "كلمنا مباشرة على خط العيادة ٩٦٦١١٢٣٤٥٦٠٠+ وبنرتب لك أقرب وقت مع الدكتور. لو الألم شديد جدًا أو فيه تورم أو نزيف، توجه لأقرب طوارئ فورًا."
+    tags: ["emergency", "طوارئ"]
+
+  - id: faq_home_visit
+    q_ar: "تسوون زيارات منزلية؟"
+    a_ar: "لا، كل خدماتنا داخل العيادة فقط."
+    tags: ["services", "منزلي"]
+
+  - id: faq_womens_section
+    q_ar: "فيه قسم نسائي مستقل؟"
+    a_ar: "إيه، عندنا قسم نسائي مستقل بمدخل خاص وكادر نسائي كامل لخدمات التجميل والليزر."
+    tags: ["clinic", "نسائي"]
+
+  - id: faq_records
+    q_ar: "أقدر أطلب ملفي الطبي؟"
+    a_ar: "إيه، حقك تطلب نسخة من ملفك أو تطلب حذف بياناتك. أرفع طلبك للإدارة وبيتواصلون معك خلال يوم عمل."
+    tags: ["pdpl", "بيانات"]
+
+  - id: faq_language
+    q_ar: "Do you speak English?"
+    a_ar: "أكيد! Happy to continue in English — how can I help?"
+    q_en: "Do you speak English?"
+    a_en: "Yes, of course. How can I help you today?"
+    tags: ["language"]
+
+  - id: faq_offers
+    q_ar: "فيه عروض حالياً؟"
+    a_ar: "العروض تتغير كل شهر وتنزل على حسابنا @noor.riyadh.clinics. أقدر أوصلك بالإدارة لو تبي تعرف عرض معين."
+    tags: ["offers", "عروض"]
+
+# -----------------------------------------------------------------------------
+# AGENT VOICE
+# -----------------------------------------------------------------------------
+agent:
+  persona_name_ar: "نورة"
+  persona_name_en: "Noura"
+  greeting_ar: "هلا وغلا! معك نورة من عيادات نور الرياض 🌿 كيف أقدر أساعدك؟"
+  greeting_en: "Hi! This is Noura from Noor Riyadh Clinics. How can I help you today?"
+  holding_reply_ar: "هذي النقطة أحب الدكتور نفسه يرد عليك فيها عشان تكون الإجابة دقيقة. حوّلت محادثتك للفريق وبيتواصلون معك بأقرب وقت خلال الدوام 🌷 وإذا تبي، أقدر أحجز لك موعد استشارة الحين."
+  holding_reply_en: "I would rather have the doctor answer that one directly so you get an accurate answer. I have passed your conversation to our team and they will reach out shortly during working hours. In the meantime, I can book you a consultation if you like."
+  emergency_reply_ar: "⚠️ إذا الوضع طارئ اتصل على الإسعاف {{ambulance}} فورًا أو توجه لأقرب طوارئ. وللحالات المستعجلة عندنا كلّم خط العيادة مباشرة {{urgent_line}}. سلامتك أهم شي، لا تنتظر رد الرسائل.\n{{nearest_er}}"
+  emergency_reply_en: "⚠️ If this is an emergency, call {{ambulance}} for an ambulance right away or go to the nearest emergency room. For urgent clinic cases call us directly on {{urgent_line}}. Please do not wait for a reply here."
+  style_notes_ar:
+    - "استخدم كلمات أهل الرياض: هلا، أبشر، تم، وش، ليه، كذا، على طول، يمديك، ودك."
+    - "لا تستخدم عبارات فصحى ثقيلة مثل: يسعدنا أن نبلغكم، تفضلوا بزيارتنا، نحيطكم علمًا."
+    - "الأرقام اكتبها بالعربي الهندي في النص العادي، لكن أرقام الحجز والجوال اتركها كما هي."

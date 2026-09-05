@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>عيادات نور الرياض — تجربة المساعد الآلي</title>
+<style>
+  :root { --accent:#0f766e; --ink:#0f172a; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Arabic",Tahoma,sans-serif;
+         background:linear-gradient(180deg,#f8fafc 0%,#eef2f5 100%); color:var(--ink); min-height:100vh; }
+  header { background:#fff; border-bottom:1px solid #e2e8f0; padding:18px 24px; display:flex; align-items:center; gap:12px; }
+  header .logo { width:38px;height:38px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center;font-weight:800; }
+  header h1 { font-size:17px; margin:0; }
+  header p { margin:2px 0 0; font-size:13px; color:var(--muted); }
+  main { max-width:920px; margin:0 auto; padding:48px 24px 120px; }
+  .hero { background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:36px; }
+  .hero h2 { margin:0 0 10px; font-size:26px; }
+  .hero p { color:var(--muted); line-height:1.8; margin:0 0 20px; font-size:15px; }
+  .cta { background:var(--accent); color:#fff; border:0; border-radius:10px; padding:12px 22px; font-size:15px; font-weight:600; cursor:pointer; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:14px; margin-top:28px; }
+  .card { background:#fff; border:1px solid #e2e8f0; border-radius:14px; padding:18px; }
+  .card h3 { margin:0 0 6px; font-size:14px; }
+  .card p { margin:0; font-size:13px; color:var(--muted); line-height:1.7; }
+  code { background:#f1f5f9; padding:2px 6px; border-radius:5px; font-size:13px; direction:ltr; display:inline-block; }
+  pre { background:#0f172a; color:#e2e8f0; padding:16px; border-radius:12px; overflow:auto; direction:ltr; text-align:left; font-size:12.5px; line-height:1.6; }
+  .try { margin-top:34px; }
+  .try h3 { font-size:15px; margin:0 0 10px; }
+  .try ul { margin:0; padding-inline-start:20px; color:var(--muted); font-size:14px; line-height:2; }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">ن</div>
+  <div>
+    <h1>عيادات نور الرياض</h1>
+    <p>طب أسنان وتجميل — حي الصحافة</p>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h2>موظفة الاستقبال الآلية — تجربة حية</h2>
+    <p>
+      هذي صفحة تجريبية تشبه موقع العيادة. الودجت في الزاوية يشتغل على نفس المحرك اللي يرد على تيليجرام:
+      نفس قاعدة المعرفة، نفس فحوصات السلامة، ونفس نظام الحجز. جرّب تحجز موعد أو تسأل عن الأسعار.
+    </p>
+    <button class="cta" onclick="window.FrontOfficeWidget.open()">افتح المحادثة</button>
+
+    <div class="try">
+      <h3>جرّب تكتب:</h3>
+      <ul>
+        <li>أبي أحجز موعد تنظيف أسنان بكرة العصر</li>
+        <li>كم سعر التبييض؟ وتقبلون بوبا؟</li>
+        <li>ودي أأجل موعدي، رقم الحجز عندي</li>
+        <li>I would like to book a HydraFacial this week</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="grid">
+    <div class="card"><h3>لهجة سعودية</h3><p>يرد بالعامية النجدية، ويتحول للإنجليزي تلقائيًا إذا كتبت بالإنجليزي.</p></div>
+    <div class="card"><h3>حجز حقيقي</h3><p>يفحص جدول كل دكتور والاستراحات والإجازات، ويمنع الحجز المزدوج.</p></div>
+    <div class="card"><h3>حدود واضحة</h3><p>ما يعطي نصيحة طبية ولا سعر غير منشور — يحوّل للفريق البشري مباشرة.</p></div>
+    <div class="card"><h3>خارج الدوام</h3><p>يستقبل الحجوزات ٢٤ ساعة، والرقم يظهر في لوحة التحكم.</p></div>
+  </div>
+
+  <section class="hero" style="margin-top:28px">
+    <h3 style="margin:0 0 12px;font-size:16px">التركيب على موقع العيادة — سطر واحد</h3>
+<pre>&lt;script src="https://YOUR-API-HOST/widget/widget.js"
+        data-api="https://YOUR-API-HOST"
+        data-clinic="noor-riyadh"
+        data-locale="ar"
+        data-accent="#0f766e"
+        defer&gt;&lt;/script&gt;</pre>
+    <p style="font-size:13px;color:var(--muted);margin:12px 0 0">
+      بدون أي مكتبات خارجية، وبدون كوكيز. كل شيء داخل <code>shadow DOM</code> فما يأثر على تنسيق الموقع.
+    </p>
+  </section>
+</main>
+
+<!-- The widget under test. data-api defaults to this page's origin. -->
+<script src="./widget.js"
+        data-clinic="noor-riyadh"
+        data-locale="ar"
+        data-accent="#0f766e"
+        data-title="عيادات نور الرياض"
+        defer></script>
+</body>
+</html>

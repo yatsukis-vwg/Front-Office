@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.next/
+out/
+.env
+.env.local
+.data/
+*.tsbuildinfo
+.DS_Store
+coverage/
+
+# Next.js generated
+apps/dashboard/next-env.d.ts

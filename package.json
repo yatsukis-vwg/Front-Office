@@ -1,0 +1,30 @@
+{
+  "name": "front-office",
+  "private": true,
+  "version": "1.0.0",
+  "description": "AI receptionist for Saudi medical & aesthetic clinics \u2014 Telegram + web chat, Arabic-first.",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "npm run build -w @front-office/core && npm run build -w @front-office/api",
+    "build:dashboard": "npm run build -w @front-office/dashboard",
+    "dev": "npm run dev -w @front-office/api",
+    "dev:dashboard": "npm run dev -w @front-office/dashboard",
+    "typecheck": "tsc -b --force packages/core apps/api",
+    "test": "tsx --test \"packages/core/src/**/*.test.ts\"",
+    "seed": "tsx scripts/seed.ts",
+    "kb:validate": "tsx scripts/validate-kb.ts",
+    "demo": "npm run seed && npm run dev",
+    "telegram:register": "tsx scripts/register-telegram-webhook.ts"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
