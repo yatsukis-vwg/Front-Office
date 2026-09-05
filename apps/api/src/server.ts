@@ -1,72 +1,24 @@
-import cors from 'cors';
-import express, { type NextFunction, type Request, type Response } from 'express';
-import { getConfig, logger } from '@front-office/core';
-import { bootstrap } from './context.js';
-import { requireAdmin, requireCronSecret } from './middleware/auth.js';
-import { adminRouter } from './routes/admin.js';
-import { chatRouter } from './routes/chat.js';
-import { jobsRouter, startInProcessJobs } from './routes/jobs.js';
-import { webhookRouter } from './routes/webhooks.js';
+import { assertProductionSafety, getConfig, logger } from '@front-office/core';
+import { createApp, ensureBootstrapped } from './app.js';
+import { startInProcessJobs } from './routes/jobs.js';
 
 /**
- * API server.
+ * Long-running API process — Railway, Render, Fly, or local development.
  *
- * Deploys to Railway/Render/Fly as a normal Node process, or to Vercel as a
- * serverless function (see api/index.ts). Nothing in here is platform-specific
- * apart from the in-process scheduler, which is disabled when a platform cron
- * drives /jobs instead.
+ * For serverless (Vercel), `api/index.js` uses `createApp()` directly and never
+ * reaches this file.
  */
-
 const config = getConfig();
-const app = express();
-
-app.set('trust proxy', 1);
-app.disable('x-powered-by');
-
-app.use(
-  cors({
-    // The widget is embedded on clinic sites, so the chat API is public by
-    // design; the admin API is behind an admin key regardless of origin.
-    origin: true,
-    credentials: false,
-  }),
-);
-
-// WhatsApp signs the raw body, so keep a copy before JSON parsing consumes it.
-app.use(
-  express.json({
-    limit: '1mb',
-    verify: (req, _res, buf) => {
-      (req as Request & { rawBody?: string }).rawBody = buf.toString('utf8');
-    },
-  }),
-);
-
-app.get('/health', (_req, res) => {
-  res.json({ ok: true, store: config.storeDriver, uptime_s: Math.round(process.uptime()) });
-});
-
-app.use('/webhooks', webhookRouter);
-app.use('/api/chat', chatRouter);
-app.use('/api/admin', requireAdmin, adminRouter);
-app.use('/jobs', requireCronSecret, jobsRouter);
-
-// Serves the embeddable widget script and its demo page from the API origin,
-// so a clinic only has to add one <script> tag.
-app.use('/widget', express.static(new URL('../../../widget', import.meta.url).pathname, { maxAge: '1h' }));
-
-app.use((_req, res) => {
-  res.status(404).json({ error: 'not_found' });
-});
-
-app.use((error: Error, _req: Request, res: Response, _next: NextFunction) => {
-  logger.error('server.unhandled_error', { error });
-  res.status(500).json({ error: 'internal_error' });
-});
+const app = createApp();
 
 async function main(): Promise<void> {
-  await bootstrap();
+  assertProductionSafety(config);
+  await ensureBootstrapped();
+
+  // Timers only make sense in a process that stays alive. On serverless the
+  // platform scheduler drives POST /jobs/tick and /jobs/nightly instead.
   if (config.enableInProcessJobs) startInProcessJobs();
+
   app.listen(config.port, () => {
     logger.info('server.listening', { port: config.port, env: config.nodeEnv });
     process.stdout.write(

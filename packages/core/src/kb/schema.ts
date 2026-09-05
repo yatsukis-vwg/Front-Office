@@ -190,13 +190,34 @@ export interface KbValidationIssue {
   message: string;
 }
 
+export interface KbValidationSuccess {
+  ok: true;
+  kb: KnowledgeBase;
+}
+
+export interface KbValidationFailure {
+  ok: false;
+  issues: KbValidationIssue[];
+}
+
+export type KbValidationResult = KbValidationSuccess | KbValidationFailure;
+
+/**
+ * Explicit type guard, for the same reason as `isBookingFailure`: callers get a
+ * declared predicate rather than relying on the compiler inferring discriminated
+ * narrowing across a package boundary.
+ */
+export function isKbValidationFailure(result: KbValidationResult): result is KbValidationFailure {
+  return result.ok === false;
+}
+
 /**
  * Validates structure *and* the cross-references the schema cannot express:
  * a service pointing at an unknown doctor is the single most likely mistake
  * when a new clinic is onboarded, and it must fail loudly at load time rather
  * than produce an empty availability list at 2am.
  */
-export function validateKnowledgeBase(input: unknown): { ok: true; kb: KnowledgeBase } | { ok: false; issues: KbValidationIssue[] } {
+export function validateKnowledgeBase(input: unknown): KbValidationResult {
   const parsed = knowledgeBaseSchema.safeParse(input);
   if (!parsed.success) {
     return {

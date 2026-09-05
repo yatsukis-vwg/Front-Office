@@ -25,6 +25,7 @@ export {
   loadKnowledgeBase,
   loadKnowledgeBaseFile,
   publishedPriceValues,
+  resolveClinicsDir,
 } from './kb/loader.js';
 
 export { detectConversationLocale, detectLocale, normalizeArabic, normalizeForMatching, westerniseDigits } from './safety/language.js';
@@ -51,11 +52,20 @@ export {
 } from './scheduling/availability.js';
 export {
   bookAppointment,
+  bookingErrorBody,
   cancelAppointment,
   getAvailability,
+  isBookingFailure,
   rescheduleAppointment,
   scheduleReminders,
+  type AvailabilityResult,
+  type AvailabilitySuccess,
+  type BookingErrorBody,
+  type BookingFailure,
   type BookingResult,
+  type BookingSuccess,
+  type CancelResult,
+  type CancelSuccess,
   type SlotSummary,
 } from './scheduling/booking.js';
 

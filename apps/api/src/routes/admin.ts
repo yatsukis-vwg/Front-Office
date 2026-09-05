@@ -3,6 +3,7 @@ import {
   appointments,
   audit,
   bookAppointment,
+  bookingErrorBody,
   cancelAppointment,
   clinics,
   computeMetrics,
@@ -12,6 +13,8 @@ import {
   exportPatientRecord,
   getAvailability,
   invalidateKnowledgeBaseCache,
+  isBookingFailure,
+  isKbValidationFailure,
   kbOverrides,
   loadKnowledgeBase,
   loadKnowledgeBaseFile,
@@ -301,8 +304,8 @@ adminRouter.get('/availability', async (req, res) => {
     locale: 'ar',
     limit: Number(req.query.limit ?? 40),
   });
-  if (!result.ok) {
-    res.status(400).json({ error: result.code, message: result.message });
+  if (isBookingFailure(result)) {
+    res.status(400).json(bookingErrorBody(result));
     return;
   }
   res.json({ slots: result.slots });
@@ -337,8 +340,8 @@ adminRouter.post('/appointments', async (req, res) => {
     // Reception can override the notice window and book into a break.
     allowOutOfPolicy: req.body.force === true,
   });
-  if (!result.ok) {
-    res.status(400).json({ error: result.code, message: result.message, ...(result.code === 'slot_taken' ? { alternatives: result.alternatives } : {}) });
+  if (isBookingFailure(result)) {
+    res.status(400).json(bookingErrorBody(result));
     return;
   }
   res.json({ appointment: result.appointment, reference: result.reference, when: result.label });
@@ -353,8 +356,8 @@ adminRouter.post('/appointments/:reference/cancel', async (req, res) => {
     actorType: 'staff',
     actorId: staffId(req),
   });
-  if (!result.ok) {
-    res.status(404).json({ error: result.code, message: result.message });
+  if (isBookingFailure(result)) {
+    res.status(404).json(bookingErrorBody(result));
     return;
   }
   res.json({ appointment: result.appointment });
@@ -373,8 +376,8 @@ adminRouter.post('/appointments/:reference/reschedule', async (req, res) => {
     actorType: 'staff',
     actorId: staffId(req),
   });
-  if (!result.ok) {
-    res.status(400).json({ error: result.code, message: result.message });
+  if (isBookingFailure(result)) {
+    res.status(400).json(bookingErrorBody(result));
     return;
   }
   res.json({ appointment: result.appointment, reference: result.reference, when: result.label });
@@ -406,7 +409,7 @@ adminRouter.get('/kb', async (_req, res) => {
 adminRouter.put('/kb', async (req, res) => {
   const clinic = currentClinic(res);
   const result = validateKnowledgeBase(req.body?.kb);
-  if (!result.ok) {
+  if (isKbValidationFailure(result)) {
     res.status(400).json({ error: 'invalid_kb', issues: result.issues });
     return;
   }

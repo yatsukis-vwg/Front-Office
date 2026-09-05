@@ -229,15 +229,34 @@ npm start -w @front-office/api
 
 ### API → Vercel
 
-`apps/api/src/server.ts` exports the Express `app`, so it runs behind a single
-serverless function. On Vercel, set `ENABLE_INPROCESS_JOBS=false` and use Vercel
-Cron for the two job endpoints — serverless instances do not stay alive to run
-timers.
+This is a monorepo with two deployables, so **Vercel needs to be told which one
+it is building** — pointing a project at the repository root will build the
+wrong thing.
+
+Create the project with **Root Directory = `apps/api`**. It picks up
+[`apps/api/vercel.json`](apps/api/vercel.json), which installs the whole
+workspace, runs `tsc -b` (building `@front-office/core` through the project
+reference), and routes every path to one serverless function
+(`apps/api/api/index.js`). That function imports the compiled Express app and
+never calls `listen()`.
+
+Two settings matter on serverless:
+
+- `ENABLE_INPROCESS_JOBS=false` — instances do not stay alive to run timers.
+  Add Vercel Cron entries for `POST /jobs/tick` and `POST /jobs/nightly` instead
+  (both take the `x-cron-secret` header).
+- `STORE_DRIVER=supabase` — the file store is per-instance and will not survive.
+
+The clinic YAML files are bundled into the function via `includeFiles`, and the
+knowledge base loader resolves `clinics/` relative to its own module when the
+working directory is not the repository root.
 
 ### Console → Vercel
 
-Root directory `apps/dashboard`, framework Next.js, and set `API_BASE_URL`,
-`ADMIN_API_KEY`, `DASHBOARD_PASSWORD` and `DEFAULT_CLINIC_SLUG`.
+A **separate** Vercel project with **Root Directory = `apps/dashboard`**
+(config in [`apps/dashboard/vercel.json`](apps/dashboard/vercel.json)). Set
+`API_BASE_URL` to the deployed API's URL, plus `ADMIN_API_KEY`,
+`DASHBOARD_PASSWORD` and `DEFAULT_CLINIC_SLUG`.
 
 ### Database
 
@@ -265,7 +284,9 @@ packages/core/src/
   crypto/         AES-256-GCM encryption, phone hashing, booking references
   jobs/           reminders, PDPL retention purge, export and erasure
   metrics/        the numbers behind the metrics page
-apps/api/                       Express: webhooks, chat API, admin API, jobs
+apps/api/src/app.ts             the Express app (no listener — shared by both entries)
+apps/api/src/server.ts          long-running entry: bootstrap, jobs, listen
+apps/api/api/index.js           Vercel serverless entry
 apps/dashboard/                 Next.js admin console
 widget/                         embeddable chat widget + demo page
 supabase/migrations/            Postgres schema, RLS, exclusion constraint

@@ -48,7 +48,44 @@ export interface BookingSuccess {
   serviceName: string;
 }
 
+export interface AvailabilitySuccess {
+  ok: true;
+  slots: SlotSummary[];
+}
+
+export interface CancelSuccess {
+  ok: true;
+  appointment: Appointment;
+}
+
 export type BookingResult = BookingSuccess | BookingFailure;
+export type AvailabilityResult = AvailabilitySuccess | BookingFailure;
+export type CancelResult = CancelSuccess | BookingFailure;
+
+/** The HTTP-shaped body for a failed booking operation. */
+export interface BookingErrorBody {
+  error: BookingFailure['code'];
+  message: string;
+  alternatives?: SlotSummary[];
+}
+
+/**
+ * Explicit type guard over every booking-service result.
+ *
+ * Callers use this instead of `if (!result.ok)` so the narrowing is a declared
+ * predicate rather than something the compiler has to infer across a package
+ * boundary — inference that has proven to differ between build environments.
+ */
+export function isBookingFailure<T extends { ok: true }>(result: T | BookingFailure): result is BookingFailure {
+  return result.ok === false;
+}
+
+/** Builds the error response body, including alternatives when the slot is gone. */
+export function bookingErrorBody(failure: BookingFailure): BookingErrorBody {
+  return failure.code === 'slot_taken'
+    ? { error: failure.code, message: failure.message, alternatives: failure.alternatives }
+    : { error: failure.code, message: failure.message };
+}
 
 export function toSlotSummary(slot: Slot, kb: KnowledgeBase, locale: Locale): SlotSummary {
   return {
@@ -72,7 +109,7 @@ export interface AvailabilityQuery {
   limit?: number;
 }
 
-export async function getAvailability(query: AvailabilityQuery): Promise<{ ok: true; slots: SlotSummary[] } | BookingFailure> {
+export async function getAvailability(query: AvailabilityQuery): Promise<AvailabilityResult> {
   const service = findService(query.kb, query.serviceId);
   if (!service) return { ok: false, code: 'unknown_service', message: `No service matching "${query.serviceId}"` };
   if (!service.bookable) return { ok: false, code: 'service_not_bookable', message: `${service.name_en} is not bookable online` };
@@ -339,9 +376,7 @@ export interface CancelRequest {
   actorType?: 'agent' | 'staff';
 }
 
-export async function cancelAppointment(
-  request: CancelRequest,
-): Promise<{ ok: true; appointment: Appointment } | BookingFailure> {
+export async function cancelAppointment(request: CancelRequest): Promise<CancelResult> {
   const existing = await appointments.byReference(request.clinicId, request.reference);
   if (!existing || existing.status !== 'booked') {
     return { ok: false, code: 'not_found', message: `No active booking with reference ${request.reference}` };
